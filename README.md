@@ -4,8 +4,8 @@ HTTP Basic Auth template with Go.
 
 ### How to run
 
-1. Change .env file, set admin user and password
-2. go run *.go
+1. Make .env file, set admin user and password. Template is available in .env.example   
+2. Execute go run *.go
 
 ### Endpoints
 
