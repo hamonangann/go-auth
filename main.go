@@ -17,13 +17,6 @@ func ConvertObjectToJSON(w http.ResponseWriter, o any) {
 }
 
 func ActionUser(w http.ResponseWriter, r *http.Request) {
-	if !Auth(w, r) {
-		return
-	}
-	if !AllowOnlyGet(w, r) {
-		return
-	}
-
 	if id := r.URL.Query().Get("id"); id != "" {
 		ConvertObjectToJSON(w, SelectUser(id))
 		return
@@ -33,10 +26,16 @@ func ActionUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/user", ActionUser)
+	mux := http.DefaultServeMux
+	mux.HandleFunc("/user", ActionUser)
+
+	handler := http.Handler(mux)
+	handler = MiddlewareAuth(handler)
+	handler = MiddlewareAllowOnlyGet(handler)
 
 	server := new(http.Server)
 	server.Addr = ":9000" // listen to port 9000
+	server.Handler = handler
 
 	fmt.Println("server started at localhost:9000")
 	server.ListenAndServe()
