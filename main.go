@@ -6,6 +6,23 @@ import (
 	"net/http"
 )
 
+type CustomMux struct {
+	http.ServeMux
+	middleware []func(next http.Handler) http.Handler
+}
+
+func (c *CustomMux) RegisterMiddleware(next func(next http.Handler) http.Handler) {
+	c.middleware = append(c.middleware, next)
+}
+
+func (c *CustomMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	current := http.Handler(&c.ServeMux)
+	for _, next := range c.middleware {
+		current = next(current)
+	}
+	current.ServeHTTP(w, r)
+}
+
 func ConvertObjectToJSON(w http.ResponseWriter, o any) {
 	res, err := json.Marshal(o)
 	if err != nil {
@@ -26,16 +43,15 @@ func ActionUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	mux := http.DefaultServeMux
+	mux := new(CustomMux)
 	mux.HandleFunc("/user", ActionUser)
 
-	handler := http.Handler(mux)
-	handler = MiddlewareAuth(handler)
-	handler = MiddlewareAllowOnlyGet(handler)
+	mux.RegisterMiddleware(MiddlewareAuth)
+	mux.RegisterMiddleware(MiddlewareAllowOnlyGet)
 
 	server := new(http.Server)
 	server.Addr = ":9000" // listen to port 9000
-	server.Handler = handler
+	server.Handler = mux
 
 	fmt.Println("server started at localhost:9000")
 	server.ListenAndServe()
